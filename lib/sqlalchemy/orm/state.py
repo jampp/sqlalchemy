@@ -26,7 +26,13 @@ import sys
 
 class InstanceState(object):
     """tracks state information at the instance level."""
-
+   
+    # Slot-ize heavily-used attributes - it's faster, and more compact
+    # like this. Do *NOT* add class-defaulted attributes, as using slots
+    # invalidate that mechanism.
+    __slots__ = ('class','manager','obj','callables','comitted_state',
+                 '__dict__','__weakref__')
+    
     session_id = None
     key = None
     runid = None
@@ -134,11 +140,13 @@ class InstanceState(object):
         d = {'instance':self.obj()}
         d.update(
             (k, self.__dict__[k]) for k in (
-                'committed_state', 'pending', 'modified', 'expired',
-                'callables', 'key', 'parents', 'load_options', 'mutable_dict',
+                'pending', 'modified', 'expired',
+                'key', 'parents', 'load_options', 'mutable_dict',
                 'class_',
             ) if k in self.__dict__
         )
+        # slots
+        d.update((k,getattr(self, k)) for k in ('committed_state', 'callables'))
         if self.load_path:
             d['load_path'] = interfaces.serialize_path(self.load_path)
 
