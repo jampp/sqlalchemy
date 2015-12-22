@@ -149,7 +149,6 @@ class QueryableAttribute(interfaces.PropComparator):
 
 class InstrumentedAttribute(QueryableAttribute):
     """Class bound instrumented attribute which adds descriptor methods."""
-
     def __set__(self, instance, value):
         self.impl.set(instance_state(instance),
                         instance_dict(instance), value, None)
@@ -157,15 +156,21 @@ class InstrumentedAttribute(QueryableAttribute):
     def __delete__(self, instance):
         self.impl.delete(instance_state(instance), instance_dict(instance))
 
-    def __get__(self, instance, owner):
-        if instance is None:
-            return self
-
-        dict_ = instance_dict(instance)
-        if self._supports_population and self.key in dict_:
-            return dict_[self.key]
-        else:
-            return self.impl.get(instance_state(instance),dict_)
+    try:
+        from sqlalchemy.cinstrumented import InstrumentedGetter
+        __get__ = InstrumentedGetter(globals())
+        __get__.__name__ = '__get__'
+        del InstrumentedGetter
+    except ImportError:
+        def __get__(self, instance, owner):
+            if instance is None:
+                return self
+        
+            dict_ = instance_dict(instance)
+            if self._supports_population and self.key in dict_:
+                return dict_[self.key]
+            else:
+                return self.impl.get(instance_state(instance),dict_)
 
 def create_proxied_attribute(descriptor):
     """Create an QueryableAttribute / user descriptor hybrid.
